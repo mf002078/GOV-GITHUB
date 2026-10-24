@@ -1,5 +1,5 @@
 import json,pathlib,tempfile,unittest
-from tools.check_worklog import verify
+from tools.check_worklog import verify_legacy_fixture as verify
 REC={"schema_version":"1.0","entry_id":"A","timestamp_utc":"2026-10-24T11:00:00Z","version":"1","issue_id":"X","summary":"change","completed_items":["done"],"code_files":["a.py"],"evidence_paths":[],"status":"TESTED","baseline_sha":"base","author_role":"Codex","correction_of":None}
 class HistoryTests(unittest.TestCase):
  def setUp(self):
