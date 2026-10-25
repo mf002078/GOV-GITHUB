@@ -8,18 +8,47 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      CANDIDATE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      PR_BASE_SHA: ${{ github.event.pull_request.base.sha || '1975ee74a62be815a032254d51603e15b4bbe093' }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python tools/check_worklog.py
-      - name: Check immutable PR history
-        if: github.event_name == 'pull_request'
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-        run: python tools/check_worklog.py --base "$BASE_SHA"
-      - run: python -m unittest discover -s tests -v
+      - name: Run L1 synthetic tests on exact candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/gov-github-002"
+          python -B -m unittest discover -s tests -v 2>&1 | tee "$RUNNER_TEMP/gov-github-002/unittest.txt"
+      - name: Prepare SHA-bound candidate manifest (NOT_ATTESTED)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -B tools/prepare_ci_evidence.py \
+            --expected-sha "$CANDIDATE_SHA" \
+            --pr-base "$PR_BASE_SHA" \
+            --output "$RUNNER_TEMP/gov-github-002/manifest.json" \
+            2>&1 | tee "$RUNNER_TEMP/gov-github-002/transport.txt"
+      - name: Validate manifest and immutable commit history
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -B tools/check_worklog.py \
+            --head "$CANDIDATE_SHA" \
+            --evidence "$RUNNER_TEMP/gov-github-002/manifest.json" \
+            2>&1 | tee "$RUNNER_TEMP/gov-github-002/validation.txt"
+      - name: Retain candidate evidence (not independent attestation)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: candidate-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/gov-github-002/
+          if-no-files-found: error
+          retention-days: 14
