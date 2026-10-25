@@ -114,10 +114,11 @@ python -B tools/check_worklog.py --evidence /tmp/gov-github-002-evidence.json
 ```
 
 Missing manifest or dirty/untracked checkout blocks CLI verification. It only
-checks committed snapshots. The pre-existing candidate CI invokes this checker
-without a post-commit manifest and therefore **will fail closed** on these new
-commits; no workflow or required check is weakened to hide that limitation.
-The external evidence transport/CI integration still needs independent review.
+checks committed snapshots. The original candidate CI invoked this checker
+without a post-commit manifest and failed closed (run `40146618895`). The
+candidate-only integration below supplies the manifest without weakening the
+checker. Independent review of the transport remains required; this is not
+protected evidence acceptance.
 
 `verify_legacy_fixture` supports the five original synthetic regression tests;
 it is not an admission API and is not used by the production CLI.
@@ -132,3 +133,67 @@ it is not an admission API and is not used by the production CLI.
 
 No independent service has been deployed, no approval is asserted, and no PR
 may be merged based solely on this candidate-controlled verifier.
+
+## PR #6: Candidate CI evidence transport (0.3.1)
+
+Review source: https://github.com/mf002078/GOV-GITHUB/pull/6
+Original failed run: https://github.com/mf002078/GOV-GITHUB/actions/runs/40146618895
+The follow-up task authorizes candidate workflow integration only, not changes
+to formal policy, Rulesets, privileged identities or independent trust roots.
+Gate D remains the bounded owner-issued CONDITIONAL_DEV_PASS; D05 denials
+remain NOT_TESTED. Gate A remains BLOCKED/UNVERIFIED.
+
+The existing job name **validate** is retained, with `contents: read` only.
+It uses `pull_request`, never `pull_request_target`, no project secrets or
+OIDC/attestation permissions, and checkout disables credential persistence.
+Both checkout and verification use the event's immutable PR `head.sha`, not
+the GitHub-generated merge snapshot. Event values are passed through environment
+variables and quoted arguments, never interpolated as shell instructions.
+
+Execution order:
+
+1. Run the complete Python 3.12 synthetic unittest suite. Bash pipefail preserves
+   a test failure through tee; later normal steps cannot turn it into success.
+2. `prepare_ci_evidence.py` checks clean checkout HEAD equals the exact event SHA.
+   It requires the event base to descend from the fixed anchor and be an ancestor
+   of the candidate. The original schema-1 baseline is supported at its exact
+   qualified anchor; a later qualified base does not skip any earlier commits.
+   An unrelated, stale/nonancestor, pre-anchor or unavailable base fails closed.
+3. Validate all revisions from the fixed anchor, collect their declared evidence
+   paths, and hash Git blob bytes at each revision's own SHA. Emit the existing
+   exact manifest schema, always NOT_ATTESTED, outside the checkout. Exclusive
+   creation rejects stale manifest files. No history, tests or digest checks are
+   bypassed; no fixed or guessed candidate SHA is inserted.
+4. Run the original checker CLI against the exact event head and emitted manifest.
+   Its complete-set, SHA256, mirror, path and historical-byte checks remain required.
+5. Upload test output, transport output, manifest and validation output as a
+   candidate evidence artifact named by run ID/attempt. Upload runs on failure
+   too, for diagnostics; it cannot override the failed validate conclusion.
+   The upload action is pinned to verified v4.6.2 commit
+   `ea165f8d65b6e75b540449e92b4886f43607fa02`.
+
+Local reproduction (clean committed checkout; use a new external output path):
+
+```sh
+python -B -m unittest discover -s tests -v
+python -B tools/prepare_ci_evidence.py \
+  --expected-sha "$(git rev-parse HEAD)" \
+  --pr-base 1975ee74a62be815a032254d51603e15b4bbe093 \
+  --output /tmp/gov-github-002-ci-manifest.json
+python -B tools/check_worklog.py \
+  --head "$(git rev-parse HEAD)" \
+  --evidence /tmp/gov-github-002-ci-manifest.json
+```
+
+The push-to-main trigger is retained, but merge commits and unqualified history
+remain rejected. This work does not create or approve a protected integration
+path. Such a path is a separate owner/reviewer decision, not a fallback added to
+make CI green.
+
+The manifest attests to nothing: it structurally binds candidate Git evidence
+bytes, including older committed test reports, not proof those older tests ran
+on the new candidate. The fresh unittest output belongs to this run's artifact;
+its GitHub transport is useful evidence retention, not an independently trusted
+runner signature. A candidate can modify its workflow/tools; the unchanged
+independent Protected Validator and reviewer requirements still block Gate A.
+No independent test/source authentication is claimed.

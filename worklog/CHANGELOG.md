@@ -86,3 +86,43 @@ Append only — never delete or edit history.
   "version": "0.3.0-candidate.2"
 }
 ```
+
+## GOV-GITHUB-002-REV-003
+
+```json
+{
+  "author_role": "Codex",
+  "baseline_sha": "06b35320f8088b16946e99a4cbd12e14f8d48ec8",
+  "code_files": [
+    ".github/workflows/governance.yml",
+    "tools/check_worklog.py",
+    "tools/prepare_ci_evidence.py",
+    "tests/test_ci_evidence.py",
+    "docs/GOV_GITHUB_002_CONTRACT.md",
+    "docs/evidence/GOV-GITHUB-002-ci-integration-tests.json"
+  ],
+  "completed_items": [
+    "Read PR #6 reviewer findings and failed run; preserve validate name and contents:read permissions",
+    "Checkout immutable PR event head, run unittest with pipefail, emit external per-revision manifest, invoke unchanged fail-closed checks",
+    "Share complete-set manifest validation between CLI and transport without bypassing digest or immutable history checks",
+    "Retain candidate-only test/transport/manifest/validation artifacts with SHA-pinned upload action",
+    "Add 22 transport regression tests including missing/stale/forged manifests, SHA mismatch, stale output, dirty checkout and base compatibility",
+    "64 unittest tests passed, exit 0; workflow YAML and exact-head/read-only/pipefail invariants checked",
+    "Gate A BLOCKED/UNVERIFIED; provenance NOT_ATTESTED; D05 denials NOT_TESTED; no policy/Ruleset change"
+  ],
+  "correction_of": null,
+  "entry_id": "GOV-GITHUB-002-REV-003",
+  "evidence_paths": [
+    ".github/workflows/governance.yml",
+    "tools/prepare_ci_evidence.py",
+    "tests/test_ci_evidence.py",
+    "docs/evidence/GOV-GITHUB-002-ci-integration-tests.json"
+  ],
+  "issue_id": "GOV-GITHUB-002",
+  "schema_version": "2.0",
+  "status": "TESTED",
+  "summary": "Integrate exact-head NOT_ATTESTED manifest transport into existing validate job after original CI run 40146618895 failed closed; 64 synthetic tests pass.",
+  "timestamp_utc": "2026-10-25T00:32:31.636472Z",
+  "version": "0.3.1-candidate.1"
+}
+```

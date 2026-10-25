@@ -226,6 +226,23 @@ def verify_evidence(root, candidate_sha, evidence, expected_paths):
     return 'NOT_ATTESTED'
 
 
+def verify_manifest(root, result, records):
+    """Validate the complete revision set; shared by CLI and candidate transport."""
+    if not isinstance(records, list):
+        raise ValueError('evidence manifest must be an array')
+    seen = set()
+    for record in records:
+        if not isinstance(record, dict):
+            raise ValueError('invalid evidence record')
+        sha = record.get('candidate_sha')
+        if not isinstance(sha, str) or sha in seen or sha not in result['evidence_by_commit']:
+            raise ValueError('duplicate or unexpected candidate SHA')
+        verify_evidence(root, sha, record, result['evidence_by_commit'][sha])
+        seen.add(sha)
+    if seen != set(result['evidence_by_commit']):
+        raise ValueError('every candidate commit requires evidence')
+
+
 def main():
     parser = argparse.ArgumentParser(description='Offline candidate checker; not a Protected Validator')
     parser.add_argument('--base', default=LEGACY_ANCHOR)
@@ -242,19 +259,7 @@ def main():
             raise ValueError('external evidence manifest required for candidate commits')
         if args.evidence:
             records = json.loads(args.evidence.read_text(encoding='utf-8'))
-            if not isinstance(records, list):
-                raise ValueError('evidence manifest must be an array')
-            seen = set()
-            for record in records:
-                if not isinstance(record, dict):
-                    raise ValueError('invalid evidence record')
-                sha = record.get('candidate_sha')
-                if not isinstance(sha, str) or sha in seen or sha not in result['evidence_by_commit']:
-                    raise ValueError('duplicate or unexpected candidate SHA')
-                verify_evidence(ROOT, sha, record, result['evidence_by_commit'][sha])
-                seen.add(sha)
-            if seen != set(result['evidence_by_commit']):
-                raise ValueError('every candidate commit requires evidence')
+            verify_manifest(ROOT, result, records)
         print('L1 STRUCTURE PASS', json.dumps(result, sort_keys=True))
         print('Gate A BLOCKED/UNVERIFIED; NOT_ATTESTED; candidate-controlled checks only')
         return 0
